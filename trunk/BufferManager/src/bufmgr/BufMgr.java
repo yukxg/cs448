@@ -1,5 +1,7 @@
 package bufmgr;
 
+import global.*;
+
 public class BufMgr {
 	 
 /**
@@ -66,7 +68,8 @@ public void unpinPage(PageId pageno, boolean dirty) {};
 *
 * @return the first page id of the new pages.__ null, if error.
 */
-public PageId newPage(Page firstpage, int howmany) {};
+public PageId newPage(Page firstpage, int howmany) {
+	return null;};
  
 /**
 * This method should be called to delete a page that is on disk.
@@ -94,11 +97,13 @@ public void flushAllPages() {};
 /**
 * Gets the total number of buffer frames.
 */
-public int getNumBuffers() {}
+public int getNumBuffers() {
+	return 0;}
  
 /**
 * Gets the total number of unpinned buffer frames.
 */
-public int getNumUnpinned() {}
+public int getNumUnpinned() {
+	return 0;}
  
 };
