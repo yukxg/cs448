@@ -1,5 +1,6 @@
 package bufmgr;
 
+import chainexception.ChainException;
 import global.*;
 
 public class BufMgr {
@@ -34,7 +35,7 @@ public BufMgr(int numbufs, int prefetchSize, String replacementPolicy) {};
 * @param page the pointer point to the page.
 * @param emptyPage true (empty page); false (non-empty page)
 */
- public void pinPage(PageId pageno, Page page, boolean emptyPage) {};
+ public void pinPage(PageId pageno, Page page, boolean emptyPage) throws ChainException {};
  
 /**
 * Unpin a page specified by a pageId.
@@ -52,7 +53,7 @@ public BufMgr(int numbufs, int prefetchSize, String replacementPolicy) {};
 * @param pageno page number in the Minibase.
 * @param dirty the dirty bit of the frame
 */
-public void unpinPage(PageId pageno, boolean dirty) {};
+public void unpinPage(PageId pageno, boolean dirty) throws ChainException {};
  
 /** 
 * Allocate new pages.
@@ -78,7 +79,7 @@ public PageId newPage(Page firstpage, int howmany) {
 *
 * @param globalPageId the page number in the data base.
 */
-public void freePage(PageId globalPageId) {};
+public void freePage(PageId globalPageId) throws ChainException {};
  
 /**
 * Used to flush a particular page of the buffer pool to disk.
