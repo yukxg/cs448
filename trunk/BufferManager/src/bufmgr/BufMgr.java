@@ -5,6 +5,10 @@ import global.*;
 
 public class BufMgr {
 	 
+	byte[][]bufPool=null;
+	bufDescriptor[] bufDescr=null;
+	String replacementPolicy;
+	HashTable phash=null;
 /**
  * Create the BufMgr object.
  * Allocate pages (frames) for the buffer pool in main memory and
@@ -15,7 +19,15 @@ public class BufMgr {
  * @param prefetchSize number of pages to be prefetched
  * @param replacementPolicy Name of the replacement policy
  */
-public BufMgr(int numbufs, int prefetchSize, String replacementPolicy) {};
+public BufMgr(int numbufs, int prefetchSize, String replacementPolicy) {
+	//initialize all the variables
+	bufPool=new byte[numbufs][GlobalConst.PAGE_SIZE];
+	replacementPolicy=this.replacementPolicy;
+	bufDescr=new bufDescriptor[numbufs]; 
+	for(int i=0;i<numbufs;i++)
+		bufDescr[i]=new bufDescriptor();
+	phash=new HashTable(5000);
+};
  
 /** 
 * Pin a page.
@@ -35,7 +47,9 @@ public BufMgr(int numbufs, int prefetchSize, String replacementPolicy) {};
 * @param page the pointer point to the page.
 * @param emptyPage true (empty page); false (non-empty page)
 */
- public void pinPage(PageId pageno, Page page, boolean emptyPage) throws ChainException {};
+ public void pinPage(PageId pageno, Page page, boolean emptyPage) throws ChainException {
+	 
+ };
  
 /**
 * Unpin a page specified by a pageId.
@@ -70,7 +84,9 @@ public void unpinPage(PageId pageno, boolean dirty) throws ChainException {};
 * @return the first page id of the new pages.__ null, if error.
 */
 public PageId newPage(Page firstpage, int howmany) {
-	return null;};
+	
+	return null;
+	};
  
 /**
 * This method should be called to delete a page that is on disk.
