@@ -33,6 +33,16 @@ public class bufDescriptor {
 	}
 	
 	//Mutators
+	public void increase_pin_count()
+	{
+		pin_count++;
+	}
+	
+	public void decrease_pin_count()
+	{
+		pin_count--;
+	}
+	
 	
 	//TODO
 }
