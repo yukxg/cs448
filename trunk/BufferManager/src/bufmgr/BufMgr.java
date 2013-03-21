@@ -22,11 +22,12 @@ public class BufMgr {
 public BufMgr(int numbufs, int prefetchSize, String replacementPolicy) {
 	//initialize all the variables
 	bufPool=new byte[numbufs][GlobalConst.PAGE_SIZE];
-	replacementPolicy=this.replacementPolicy;
+	this.replacementPolicy=replacementPolicy;
 	bufDescr=new bufDescriptor[numbufs]; 
 	for(int i=0;i<numbufs;i++)
 		bufDescr[i]=new bufDescriptor();
 	phash=new HashTable(5000);
+	//System.out.println(replacementPolicy);
 };
  
 /** 
@@ -67,7 +68,13 @@ public BufMgr(int numbufs, int prefetchSize, String replacementPolicy) {
 * @param pageno page number in the Minibase.
 * @param dirty the dirty bit of the frame
 */
-public void unpinPage(PageId pageno, boolean dirty) throws ChainException {};
+public void unpinPage(PageId pageno, boolean dirty) throws ChainException {
+	int frame;
+	if((frame=phash.getframe(pageno.pid))!=-1){
+		//page have already existed in pool
+		
+	}
+};
  
 /** 
 * Allocate new pages.
