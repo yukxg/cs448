@@ -17,7 +17,20 @@ public class bufDescriptor {
 	}
 	
 	//Accessors
+	public int get_pin_count()
+	{
+		return pin_count;
+	}
 	
+	public PageId get_page_number()
+	{
+		return page_number;
+	}
+	
+	public boolean get_dirtybit()
+	{
+		return dirtybit;
+	}
 	
 	//Mutators
 	
