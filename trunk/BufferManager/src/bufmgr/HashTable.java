@@ -6,8 +6,8 @@ class node {
 	int page;
 	int frame;
 	public node(int page, int frame) {
-		page = this.page;
-		frame = this.frame;
+		this.page = page;
+		this.frame = frame;
 	}
 }
 
@@ -16,7 +16,7 @@ public class HashTable {
 	int size;
 
 	public HashTable(int size) {
-		size = this.size;
+		this.size = size;
 		table = new ArrayList[size];
 	}
 
