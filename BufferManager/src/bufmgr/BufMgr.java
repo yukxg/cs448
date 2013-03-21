@@ -1,5 +1,7 @@
 package bufmgr;
 
+import java.util.PriorityQueue;
+
 import chainexception.ChainException;
 import global.*;
 
@@ -9,6 +11,7 @@ public class BufMgr {
 	bufDescriptor[] bufDescr=null;
 	String replacementPolicy;
 	HashTable phash=null;
+	PriorityQueue<Integer> readylist;
 /**
  * Create the BufMgr object.
  * Allocate pages (frames) for the buffer pool in main memory and
@@ -26,7 +29,8 @@ public BufMgr(int numbufs, int prefetchSize, String replacementPolicy) {
 	bufDescr=new bufDescriptor[numbufs]; 
 	for(int i=0;i<numbufs;i++)
 		bufDescr[i]=new bufDescriptor();
-	phash=new HashTable(5000);
+	phash=new HashTable(59);
+	readylist=new PriorityQueue<Integer>();
 	//System.out.println(replacementPolicy);
 };
  
@@ -49,7 +53,20 @@ public BufMgr(int numbufs, int prefetchSize, String replacementPolicy) {
 * @param emptyPage true (empty page); false (non-empty page)
 */
  public void pinPage(PageId pageno, Page page, boolean emptyPage) throws ChainException {
-	 
+	 if (emptyPage)
+		 return;
+	 int frame;
+	 if((frame=phash.getframe(pageno.pid))!=-1){
+		 //page has already existed in the bufferpool
+		 if(bufDescr[frame].get_pin_count()==0)
+			 readylist.remove(frame);
+		 bufDescr[frame].increase_pin_count();
+		// page.setpage(bufPool[frame]);
+	 }
+	 else
+	 {
+		 
+	 }
  };
  
 /**
