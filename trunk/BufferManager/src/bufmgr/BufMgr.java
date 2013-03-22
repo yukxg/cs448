@@ -19,7 +19,7 @@ public class BufMgr {
 	PriorityQueue<Integer> readylist;
 	int lookahead;
 	int numbufs;
-
+	
 	/**
 	 * Create the BufMgr object. Allocate pages (frames) for the buffer pool in
 	 * main memory and make the buffer manage aware that the replacement policy
@@ -119,6 +119,32 @@ public class BufMgr {
 	 *            the dirty bit of the frame
 	 */
 	public void unpinPage(PageId pageno, boolean dirty) throws ChainException {
+		
+		if(phash.getframe(pageno.pid) == -1)
+		{
+			new ChainException();
+			return;
+		}
+		//TODO: Exception 
+		
+		if(bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0)
+		{
+			throw new PageUnpinnedException(null, "pin_count=0 before this call");
+		}
+		
+		bufDescr[phash.getframe(pageno.pid)].setdirty(dirty);
+		if(bufDescr[phash.getframe(pageno.pid)].get_pin_count() > 0)
+		{
+			bufDescr[phash.getframe(pageno.pid)].decrease_pin_count();
+		}
+		
+		if(bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0)
+		{
+			readylist.add(phash.getframe(pageno.pid));
+			//LRU LA policy
+			//not a candidate before this call, however, after this call
+			//the pin_count == 0, it is a candidate right now
+		}
 
 	};
 
@@ -138,7 +164,32 @@ public class BufMgr {
 	 */
 	public PageId newPage(Page firstpage, int howmany) {
 
-		return null;
+		//may need a db object at the top
+		//DiskMgr DB = new DiskMgr();
+		if(isBufferFull())
+		{
+			return null;
+			//deallocate pages
+		}
+		
+		
+		PageId temp = new PageId();
+		try {
+			
+			Minibase.DiskManager.allocate_page(temp, howmany);
+			
+			pinPage(temp, firstpage, false);
+			
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ChainException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return temp;
 	};
 
 	/**
@@ -149,6 +200,18 @@ public class BufMgr {
 	 *            the page number in the data base.
 	 */
 	public void freePage(PageId globalPageId) throws ChainException {
+		//TODO Exception 
+		
+		//pin, =1, >1
+		unpinPage(globalPageId, false);
+		
+		Minibase.DiskManager.deallocate_page(globalPageId);
+		
+		bufDescr[phash.getframe(globalPageId.pid)] = new bufDescriptor();
+		phash.delete(globalPageId.pid);
+		readylist.remove(phash.getframe(globalPageId.pid));
+		
+		
 	};
 
 	/**
@@ -211,6 +274,17 @@ public class BufMgr {
 			if (bufDescr[i].get_pin_count() == 0)
 				temp++;
 		return temp;
+	}
+	
+	private boolean isBufferFull()
+	{
+		for(int i = 0; i < bufDescr.length; i++)
+		{
+			if(bufDescr[i].get_pin_count() == 0)
+				return false;
+		}
+		
+		return true;
 	}
 
 };
