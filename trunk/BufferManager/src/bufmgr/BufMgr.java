@@ -19,7 +19,7 @@ public class BufMgr {
 	LinkedList<Integer> readylist;
 	int lookahead;
 	int numbufs;
-	
+
 	/**
 	 * Create the BufMgr object. Allocate pages (frames) for the buffer pool in
 	 * main memory and make the buffer manage aware that the replacement policy
@@ -37,18 +37,18 @@ public class BufMgr {
 		this.numbufs = numbufs;
 		this.replacementPolicy = replacementPolicy;
 		this.lookahead = prefetchSize;
-		
+
 		bufPool = new byte[numbufs][GlobalConst.PAGE_SIZE];
 		bufDescr = new bufDescriptor[numbufs];
 		phash = new HashTable(59);
 		readylist = new LinkedList<Integer>();
-		
+
 		for (int i = 0; i < numbufs; i++)
 			bufDescr[i] = new bufDescriptor();
-		for(int i=0;i<prefetchSize;i++)
+		for (int i = 0; i < prefetchSize; i++)
 			readylist.addLast(i);
-			
-		//System.out.println("number buffers is "+numbufs);
+
+		// System.out.println("number buffers is "+numbufs);
 	};
 
 	/**
@@ -73,9 +73,9 @@ public class BufMgr {
 			throws ChainException {
 		if (emptyPage)
 			return;
-		int frame= phash.getframe(pageno.pid);
-		//System.out.println("~~~"+frame);
-		if (frame  != -1) {
+		int frame = phash.getframe(pageno.pid);
+		// System.out.println("~~~"+frame);
+		if (frame != -1) {
 			// page has already existed in the bufferpool
 			if (bufDescr[frame].get_pin_count() == 0)
 				readylist.remove(new Integer(frame));
@@ -85,11 +85,12 @@ public class BufMgr {
 			// get the frame number from priority queue
 			frame = readylist.pollFirst();
 
-			System.out.println("pinpage~~ "+ frame);
+			System.out.println("pinpage~~ " + frame + "  |  "
+					+ readylist.size());
 			int pagenomber = pageno.pid;
 			PageId temp = new PageId();
 			temp.pid = pagenomber;
-			//flush the old page
+			// flush the old page
 
 			if (bufDescr[frame].isDirty())
 				flushPage(temp);
@@ -99,11 +100,12 @@ public class BufMgr {
 			bufDescr[frame].setPage(pagenomber);
 			bufDescr[frame].setPincount(1);
 			bufDescr[frame].setdirty(false);
-			//LRU LA policy
-			for (int i = 0; i < lookahead; i++) {
-				readylist.add(phash.getframe(pagenomber + i));
+			// LRU LA policy
+			for (int i = frame; i < lookahead; i++) {
+				if (!readylist.contains(i))
+					readylist.addLast(phash.getframe(pagenomber + i));
 			}
-			
+
 		}
 	};
 
@@ -121,31 +123,28 @@ public class BufMgr {
 	 *            the dirty bit of the frame
 	 */
 	public void unpinPage(PageId pageno, boolean dirty) throws ChainException {
-		
-		if(phash.getframe(pageno.pid) == -1)
-		{
+
+		if (phash.getframe(pageno.pid) == -1) {
 			new ChainException();
 			return;
 		}
-		//TODO: Exception 
-		
-		if(bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0)
-		{
-			throw new PageUnpinnedException(null, "pin_count=0 before this call");
+		// TODO: Exception
+
+		if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0) {
+			throw new PageUnpinnedException(null,
+					"pin_count=0 before this call");
 		}
-		
+
 		bufDescr[phash.getframe(pageno.pid)].setdirty(dirty);
-		if(bufDescr[phash.getframe(pageno.pid)].get_pin_count() > 0)
-		{
+		if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() > 0) {
 			bufDescr[phash.getframe(pageno.pid)].decrease_pin_count();
 		}
-		
-		if(bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0)
-		{
+
+		if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0) {
 			readylist.add(phash.getframe(pageno.pid));
-			//LRU LA policy
-			//not a candidate before this call, however, after this call
-			//the pin_count == 0, it is a candidate right now
+			// LRU LA policy
+			// not a candidate before this call, however, after this call
+			// the pin_count == 0, it is a candidate right now
 		}
 
 	};
@@ -166,23 +165,20 @@ public class BufMgr {
 	 */
 	public PageId newPage(Page firstpage, int howmany) {
 
-		//may need a db object at the top
-		//DiskMgr DB = new DiskMgr();
-		if(isBufferFull())
-		{
+		// may need a db object at the top
+		// DiskMgr DB = new DiskMgr();
+		if (isBufferFull()) {
 			return null;
-			//deallocate pages
+			// deallocate pages
 		}
-		
-		
+
 		PageId temp = new PageId();
 		try {
-			
+
 			Minibase.DiskManager.allocate_page(temp, howmany);
-			
+
 			pinPage(temp, firstpage, false);
-			
-			
+
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -190,7 +186,7 @@ public class BufMgr {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		return temp;
 	};
 
@@ -202,18 +198,17 @@ public class BufMgr {
 	 *            the page number in the data base.
 	 */
 	public void freePage(PageId globalPageId) throws ChainException {
-		//TODO Exception 
-		
-		//pin, =1, >1
+		// TODO Exception
+
+		// pin, =1, >1
 		unpinPage(globalPageId, false);
-		
+
 		Minibase.DiskManager.deallocate_page(globalPageId);
-		
+
 		bufDescr[phash.getframe(globalPageId.pid)] = new bufDescriptor();
 		phash.delete(globalPageId.pid);
 		readylist.remove(phash.getframe(globalPageId.pid));
-		
-		
+
 	};
 
 	/**
@@ -224,20 +219,20 @@ public class BufMgr {
 	 *            the page number in the database.
 	 */
 	public void flushPage(PageId pageid) {
-		int frame=phash.getframe(pageid.pid);
-		if(frame!=-1){
-			Page temp=new Page();
+		int frame = phash.getframe(pageid.pid);
+		if (frame != -1) {
+			Page temp = new Page();
 			temp.setpage(bufPool[frame]);
-			//todo write page
-			DiskMgr db=new DiskMgr();
+			// todo write page
+			DiskMgr db = new DiskMgr();
 			try {
 				db.write_page(pageid, temp);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-			} 
+			}
 		}
-			
+
 	};
 
 	/**
@@ -252,7 +247,7 @@ public class BufMgr {
 			for (int j = 0; j < table[i].size(); j++) {
 				temp.pid = table[i].get(j).page;
 				int tempframe = table[i].get(j).frame;
-				//check the dirty page
+				// check the dirty page
 				if (bufDescr[tempframe].get_dirtybit())
 					flushPage(temp);
 			}
@@ -277,15 +272,13 @@ public class BufMgr {
 				temp++;
 		return temp;
 	}
-	
-	private boolean isBufferFull()
-	{
-		for(int i = 0; i < bufDescr.length; i++)
-		{
-			if(bufDescr[i].get_pin_count() == 0)
+
+	private boolean isBufferFull() {
+		for (int i = 0; i < bufDescr.length; i++) {
+			if (bufDescr[i].get_pin_count() == 0)
 				return false;
 		}
-		
+
 		return true;
 	}
 
