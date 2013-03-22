@@ -26,6 +26,8 @@ public class HashTable {
 	public void addpage(int page, int frame) {
 		node temp = new node(page, frame);
 		ArrayList index = table[(20 * page + 10) % size];
+		if(getframe(page)!=-1)
+			return;
 		index.add(temp);
 	}
 
