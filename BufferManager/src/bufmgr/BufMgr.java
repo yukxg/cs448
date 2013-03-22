@@ -2,7 +2,7 @@ package bufmgr;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.PriorityQueue;
+import java.util.LinkedList;
 
 import chainexception.ChainException;
 import diskmgr.DiskMgr;
@@ -16,7 +16,7 @@ public class BufMgr {
 	bufDescriptor[] bufDescr = null;
 	String replacementPolicy;
 	HashTable phash = null;
-	PriorityQueue<Integer> readylist;
+	LinkedList<Integer> readylist;
 	int lookahead;
 	int numbufs;
 	
@@ -41,12 +41,12 @@ public class BufMgr {
 		bufPool = new byte[numbufs][GlobalConst.PAGE_SIZE];
 		bufDescr = new bufDescriptor[numbufs];
 		phash = new HashTable(59);
-		readylist = new PriorityQueue<Integer>();
+		readylist = new LinkedList<Integer>();
 		
 		for (int i = 0; i < numbufs; i++)
 			bufDescr[i] = new bufDescriptor();
-		for(int i=0;i<numbufs;i++)
-			readylist.add(prefetchSize);
+		for(int i=0;i<prefetchSize;i++)
+			readylist.addLast(i);
 			
 		//System.out.println("number buffers is "+numbufs);
 	};
@@ -78,21 +78,23 @@ public class BufMgr {
 		if (frame  != -1) {
 			// page has already existed in the bufferpool
 			if (bufDescr[frame].get_pin_count() == 0)
-				readylist.remove(frame);
+				readylist.remove(new Integer(frame));
 			bufDescr[frame].increase_pin_count();
 			// page.setpage(bufPool[frame]);
 		} else {
 			// get the frame number from priority queue
-			frame = readylist.remove();
+			frame = readylist.pollFirst();
+
+			System.out.println("pinpage~~ "+ frame);
 			int pagenomber = pageno.pid;
 			PageId temp = new PageId();
 			temp.pid = pagenomber;
 			//flush the old page
+
 			if (bufDescr[frame].isDirty())
 				flushPage(temp);
 			// add the new pair to page hashtable
 
-			System.out.println("in buffer manger "+pagenomber+" "+ frame);
 			phash.addpage(pagenomber, frame);
 			bufDescr[frame].setPage(pagenomber);
 			bufDescr[frame].setPincount(1);
