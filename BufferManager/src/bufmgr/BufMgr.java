@@ -2,6 +2,7 @@ package bufmgr;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedList;
 
 import chainexception.ChainException;
@@ -39,6 +40,9 @@ public class BufMgr {
 		this.lookahead = prefetchSize;
 
 		bufPool = new byte[numbufs][GlobalConst.PAGE_SIZE];
+		for (int i = 0; i < numbufs; i++)
+			for (int j = 0;j < GlobalConst.PAGE_SIZE; j++)
+				bufPool[i][j] = (byte)0;
 		bufDescr = new bufDescriptor[numbufs];
 		phash = new HashTable(59);
 		readylist = new LinkedList<Integer>();
@@ -80,14 +84,20 @@ public class BufMgr {
 			if (bufDescr[frame].get_pin_count() == 0)
 				readylist.remove(new Integer(frame));
 			bufDescr[frame].increase_pin_count();
-			// page.setpage(bufPool[frame]);
+			//bufPool[frame] = page.getpage();
+			page.setpage(bufPool[frame]);
 		} else {
 			// get the frame number from priority queue
 			frame = readylist.pollFirst();
+			// Iterator<Integer> lt=readylist.iterator();
+			// while(lt.hasNext())
+			// System.out.print(" "+lt.next());
+			// System.out.println();
 
-			System.out.println("pinpage~~ " + frame + "  |  "
-					+ readylist.size());
-			int pagenomber = pageno.pid;
+			// System.out.println("pinpage~~ " + frame + "  |  "
+			// + readylist.size());
+			//int pagenomber = pageno.pid;
+			int pagenomber = bufDescr[frame].get_page_number().pid;
 			PageId temp = new PageId();
 			temp.pid = pagenomber;
 			// flush the old page
@@ -95,15 +105,26 @@ public class BufMgr {
 			if (bufDescr[frame].isDirty())
 				flushPage(temp);
 			// add the new pair to page hashtable
-
-			phash.addpage(pagenomber, frame);
+			//bufPool[frame] = page.getpage();
+			//System.out.println("~~~" + page.getpage());
+			//System.out.println("~~~!!" + bufPool[frame]);
+			phash.addpage(pageno.pid, frame);
+			page.setpage(bufPool[frame]);
+			
+			try {
+				Minibase.DiskManager.read_page(pageno, page);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	
 			bufDescr[frame].setPage(pagenomber);
 			bufDescr[frame].setPincount(1);
 			bufDescr[frame].setdirty(false);
 			// LRU LA policy
 			for (int i = frame; i < lookahead; i++) {
 				if (!readylist.contains(i))
-					readylist.addLast(phash.getframe(pagenomber + i));
+					readylist.addLast(i);
 			}
 
 		}
@@ -130,10 +151,10 @@ public class BufMgr {
 		}
 		// TODO: Exception
 
-		if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0) {
-			throw new PageUnpinnedException(null,
-					"pin_count=0 before this call");
-		}
+		// if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0) {
+		// throw new PageUnpinnedException(null,
+		// "pin_count=0 before this call");
+		// }
 
 		bufDescr[phash.getframe(pageno.pid)].setdirty(dirty);
 		if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() > 0) {
@@ -141,10 +162,14 @@ public class BufMgr {
 		}
 
 		if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0) {
-			readylist.add(phash.getframe(pageno.pid));
+
 			// LRU LA policy
 			// not a candidate before this call, however, after this call
 			// the pin_count == 0, it is a candidate right now
+			for (int i = phash.getframe(pageno.pid); i < lookahead; i++) {
+				if (!readylist.contains(i))
+					readylist.addLast(i);
+			}
 		}
 
 	};
@@ -207,7 +232,7 @@ public class BufMgr {
 
 		bufDescr[phash.getframe(globalPageId.pid)] = new bufDescriptor();
 		phash.delete(globalPageId.pid);
-		readylist.remove(phash.getframe(globalPageId.pid));
+		readylist.remove(new Integer(phash.getframe(globalPageId.pid)));
 
 	};
 
@@ -224,10 +249,15 @@ public class BufMgr {
 			Page temp = new Page();
 			temp.setpage(bufPool[frame]);
 			// todo write page
-			DiskMgr db = new DiskMgr();
 			try {
-				db.write_page(pageid, temp);
-			} catch (Exception e) {
+				Minibase.DiskManager.write_page(pageid, temp);
+			} catch (InvalidPageNumberException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (FileIOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}

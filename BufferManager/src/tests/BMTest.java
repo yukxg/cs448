@@ -44,7 +44,6 @@ class BMDriver extends TestDriver implements GlobalConst {
 		catch (Exception e) {
 			Runtime.getRuntime().exit(1);
 		}
-
 		// Kill anything that might be hanging around
 		String newdbpath;
 		String newlogpath;
