@@ -41,15 +41,15 @@ public class BufMgr {
 
 		bufPool = new byte[numbufs][GlobalConst.PAGE_SIZE];
 		for (int i = 0; i < numbufs; i++)
-			for (int j = 0;j < GlobalConst.PAGE_SIZE; j++)
-				bufPool[i][j] = (byte)0;
+			for (int j = 0; j < GlobalConst.PAGE_SIZE; j++)
+				bufPool[i][j] = (byte) 0;
 		bufDescr = new bufDescriptor[numbufs];
-		phash = new HashTable(59);
+		phash = new HashTable(29);
 		readylist = new LinkedList<Integer>();
 
 		for (int i = 0; i < numbufs; i++)
 			bufDescr[i] = new bufDescriptor();
-		for (int i = 0; i < prefetchSize; i++)
+		for (int i = 0; i < numbufs; i++)
 			readylist.addLast(i);
 
 		// System.out.println("number buffers is "+numbufs);
@@ -84,11 +84,14 @@ public class BufMgr {
 			if (bufDescr[frame].get_pin_count() == 0)
 				readylist.remove(new Integer(frame));
 			bufDescr[frame].increase_pin_count();
-			//bufPool[frame] = page.getpage();
+			// bufPool[frame] = page.getpage();
 			page.setpage(bufPool[frame]);
 		} else {
 			// get the frame number from priority queue
+			if(readylist.isEmpty())
+				throw new ChainException(null,"used up all the readylist");
 			frame = readylist.pollFirst();
+		//	System.out.println("replace~~ " + frame+" "+pageno.pid );
 			// Iterator<Integer> lt=readylist.iterator();
 			// while(lt.hasNext())
 			// System.out.print(" "+lt.next());
@@ -96,38 +99,55 @@ public class BufMgr {
 
 			// System.out.println("pinpage~~ " + frame + "  |  "
 			// + readylist.size());
-			//int pagenomber = pageno.pid;
+			// int pagenomber = pageno.pid;
 			int pagenomber = bufDescr[frame].get_page_number().pid;
-			PageId temp = new PageId();
-			temp.pid = pagenomber;
-			// flush the old page
+			// System.out.println("Main: pinPage pid is " + pagenomber);
+			if (pagenomber != -1) {
+				PageId tempid = new PageId();
+				tempid.pid = pagenomber;
+				// flush the old page
 
-			if (bufDescr[frame].isDirty())
-				flushPage(temp);
-			// add the new pair to page hashtable
-			//bufPool[frame] = page.getpage();
-			//System.out.println("~~~" + page.getpage());
-			//System.out.println("~~~!!" + bufPool[frame]);
+				if (bufDescr[frame].isDirty())
+					flushPage(tempid);
+				// add the new pair to page hashtable
+				// bufPool[frame] = page.getpage();
+				// System.out.println("~~~" + page.getpage());
+				// System.out.println("~~~!!" + bufPool[frame]);
+
+				phash.delete(pagenomber);
+			}
 			phash.addpage(pageno.pid, frame);
 			page.setpage(bufPool[frame]);
-			
+			Page temp = new Page();
 			try {
-				Minibase.DiskManager.read_page(pageno, page);
+				Minibase.DiskManager.read_page(pageno, temp);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-	
+			for (int i = 0; i < temp.getpage().length; i++) {
+				bufPool[frame][i] = temp.getpage()[i];
+				// System.out.print(temp.getpage()[i]);
+			}
+			// System.out.println(temp.getData());
 			bufDescr[frame].setPage(pagenomber);
 			bufDescr[frame].setPincount(1);
 			bufDescr[frame].setdirty(false);
-			// LRU LA policy
-			for (int i = frame; i < lookahead; i++) {
-				if (!readylist.contains(i))
-					readylist.addLast(i);
-			}
-
 		}
+		int data = 0;
+		try {
+			data = Convert.getIntValue(0, bufPool[frame]);
+			try {
+				Thread.sleep(1);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		} catch (IOException e) {
+			System.err.print("*** Convert value failed \n");
+		}
+		// System.out.println("pin a page " + data);
+
 	};
 
 	/**
@@ -155,21 +175,22 @@ public class BufMgr {
 		// throw new PageUnpinnedException(null,
 		// "pin_count=0 before this call");
 		// }
+		if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0)
+			return;
+		else {
 
-		bufDescr[phash.getframe(pageno.pid)].setdirty(dirty);
-		if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() > 0) {
+			bufDescr[phash.getframe(pageno.pid)].setdirty(dirty);
 			bufDescr[phash.getframe(pageno.pid)].decrease_pin_count();
-		}
 
-		if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0) {
+			if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0){
 
+				if (!readylist.contains(phash.getframe(pageno.pid)))
+					readylist.addLast(phash.getframe(pageno.pid) % numbufs);
+				//System.out.println("*** "+phash.getframe(pageno.pid));
+			}
 			// LRU LA policy
 			// not a candidate before this call, however, after this call
 			// the pin_count == 0, it is a candidate right now
-			for (int i = phash.getframe(pageno.pid); i < lookahead; i++) {
-				if (!readylist.contains(i))
-					readylist.addLast(i);
-			}
 		}
 
 	};
@@ -224,16 +245,21 @@ public class BufMgr {
 	 */
 	public void freePage(PageId globalPageId) throws ChainException {
 		// TODO Exception
+		int frame = phash.getframe(globalPageId.pid);
+		if (frame != -1)
+			if (bufDescr[frame].get_pin_count() > 1)
+				throw new ChainException(null, "page is pinned");
+			// pin, =1, >1
+			else {
+				if (bufDescr[frame].get_pin_count() == 1)
+					unpinPage(globalPageId, false);
 
-		// pin, =1, >1
-		unpinPage(globalPageId, false);
+				Minibase.DiskManager.deallocate_page(globalPageId);
 
-		Minibase.DiskManager.deallocate_page(globalPageId);
-
-		bufDescr[phash.getframe(globalPageId.pid)] = new bufDescriptor();
-		phash.delete(globalPageId.pid);
-		readylist.remove(new Integer(phash.getframe(globalPageId.pid)));
-
+				bufDescr[phash.getframe(globalPageId.pid)] = new bufDescriptor();
+				phash.delete(globalPageId.pid);
+				readylist.remove(new Integer(phash.getframe(globalPageId.pid)));
+			}
 	};
 
 	/**
