@@ -26,9 +26,15 @@ public class HashTable {
 	public void addpage(int page, int frame) {
 		node temp = new node(page, frame);
 		ArrayList index = table[(20 * page + 10) % size];
-		if(getframe(page)!=-1)
+		if (getframe(page) == -1) {
+
+			//System.out.println("add page "+page+" "+frame);
+			index.add(temp);
+		}
+		else{
+			System.out.println("add page "+page+" "+frame);
 			return;
-		index.add(temp);
+		}
 	}
 
 	public int getframe(int page) {
