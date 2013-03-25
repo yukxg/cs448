@@ -88,10 +88,10 @@ public class BufMgr {
 			page.setpage(bufPool[frame]);
 		} else {
 			// get the frame number from priority queue
-			if(readylist.isEmpty())
-				throw new ChainException(null,"used up all the readylist");
+			if (readylist.isEmpty())
+				throw new ChainException(null, "used up all the readylist");
 			frame = readylist.pollFirst();
-		//	System.out.println("replace~~ " + frame+" "+pageno.pid );
+			// System.out.println("replace~~ " + frame+" "+pageno.pid );
 			// Iterator<Integer> lt=readylist.iterator();
 			// while(lt.hasNext())
 			// System.out.print(" "+lt.next());
@@ -132,6 +132,11 @@ public class BufMgr {
 			bufDescr[frame].setPage(pagenomber);
 			bufDescr[frame].setPincount(1);
 			bufDescr[frame].setdirty(false);
+			for (int i = 1; i <= numbufs; i++) {
+				int index = phash.getframe(pageno.pid + i);
+				if (!readylist.contains(index) && index != -1)
+					readylist.add(index);
+			}
 		}
 		int data = 0;
 		try {
@@ -181,11 +186,11 @@ public class BufMgr {
 			bufDescr[phash.getframe(pageno.pid)].setdirty(dirty);
 			bufDescr[phash.getframe(pageno.pid)].decrease_pin_count();
 
-			if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0){
+			if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0) {
 
 				if (!readylist.contains(phash.getframe(pageno.pid)))
 					readylist.addLast(phash.getframe(pageno.pid) % numbufs);
-				//System.out.println("*** "+phash.getframe(pageno.pid));
+				// System.out.println("*** "+phash.getframe(pageno.pid));
 			}
 			// LRU LA policy
 			// not a candidate before this call, however, after this call
@@ -321,7 +326,7 @@ public class BufMgr {
 	 * Gets the total number of unpinned buffer frames.
 	 */
 	public int getNumUnpinned() {
-		int temp = 0;
+		int temp = -1;
 		for (int i = 0; i < bufDescr.length; i++)
 			if (bufDescr[i].get_pin_count() == 0)
 				temp++;
