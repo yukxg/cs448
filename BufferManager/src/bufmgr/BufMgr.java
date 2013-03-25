@@ -33,7 +33,8 @@ public class BufMgr {
 	 * @param replacementPolicy
 	 *            Name of the replacement policy
 	 */
-	public BufMgr(int numbufs, int prefetchSize, String replacementPolicy) {
+	public BufMgr(int numbufs, int prefetchSize, String replacementPolicy)
+			throws ChainException {
 		// initialize all the variables
 		this.numbufs = numbufs;
 		this.replacementPolicy = replacementPolicy;
@@ -121,9 +122,9 @@ public class BufMgr {
 			page.setpage(bufPool[frame]);
 			try {
 				Minibase.DiskManager.read_page(pageno, page);
-			} catch (IOException e) {
+			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				throw new ChainException(e, "Unable to read page.");
 			}
 			for (int i = 0; i < page.getpage().length; i++) {
 				bufPool[frame][i] = page.getpage()[i];
@@ -140,19 +141,6 @@ public class BufMgr {
 					readylist.add(index);
 			}
 		}
-		int data = 0;
-		try {
-			data = Convert.getIntValue(0, bufPool[frame]);
-			try {
-				Thread.sleep(1);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		} catch (IOException e) {
-			System.err.print("*** Convert value failed \n");
-		}
-		// System.out.println("pin a page " + data);
 
 	};
 
@@ -168,14 +156,15 @@ public class BufMgr {
 	 *            page number in the Minibase.
 	 * @param dirty
 	 *            the dirty bit of the frame
+	 * @throws
 	 */
 	public void unpinPage(PageId pageno, boolean dirty)
-			throws HashEntryNotFoundException {
+			throws PagePinnedException, HashEntryNotFoundException {
 
 		if (phash.getframe(pageno.pid) == -1) {
-			//
 			throw new HashEntryNotFoundException(null,
 					"PageId is not found in the buffer pool");
+
 		} else {
 			// TODO: Exception
 
@@ -184,7 +173,8 @@ public class BufMgr {
 			// "pin_count=0 before this call");
 			// }
 			if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0)
-				return;
+				throw new PagePinnedException(null,
+						"pin_count=0 before this call");
 			else {
 
 				bufDescr[phash.getframe(pageno.pid)].setdirty(dirty);
@@ -217,13 +207,12 @@ public class BufMgr {
 	 * 
 	 * @return the first page id of the new pages.__ null, if error.
 	 */
-	public PageId newPage(Page firstpage, int howmany) {
+	public PageId newPage(Page firstpage, int howmany) throws ChainException {
 
 		// may need a db object at the top
 		// DiskMgr DB = new DiskMgr();
 		if (isBufferFull()) {
-			return null;
-			// deallocate pages
+			throw new ChainException(null, "fail to new a page");
 		}
 
 		PageId temp = new PageId();
@@ -256,17 +245,27 @@ public class BufMgr {
 		int frame = phash.getframe(globalPageId.pid);
 		if (frame != -1)
 			if (bufDescr[frame].get_pin_count() > 1)
-				throw new ChainException(null, "page is pinned");
-			// pin, =1, >1
+				throw new PagePinnedException(null, "page is pinned");
+
 			else {
-				if (bufDescr[frame].get_pin_count() == 1)
-					unpinPage(globalPageId, false);
+				try {
+					if (bufDescr[frame].get_pin_count() == 1)
+						unpinPage(globalPageId, false);
 
-				Minibase.DiskManager.deallocate_page(globalPageId);
+					try {
+						Minibase.DiskManager.deallocate_page(globalPageId);
+					} catch (ChainException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 
-				bufDescr[phash.getframe(globalPageId.pid)] = new bufDescriptor();
-				phash.delete(globalPageId.pid);
-				readylist.remove(new Integer(phash.getframe(globalPageId.pid)));
+					bufDescr[phash.getframe(globalPageId.pid)] = new bufDescriptor();
+					phash.delete(globalPageId.pid);
+					readylist.remove(new Integer(phash
+							.getframe(globalPageId.pid)));
+				} catch (Exception e) {
+					throw new ChainException(null, "error in the free page ");
+				}
 			}
 	};
 
