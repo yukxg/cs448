@@ -89,7 +89,7 @@ public class BufMgr {
 			page.setpage(bufPool[frame]);
 		} else {
 			// get the frame number from priority queue
-			if (readylist.isEmpty())
+			if (readylist.size()-1 == 0)
 				throw new BufferPoolExceededException(null,
 						"used up all the readylist");
 			frame = readylist.pollFirst();
@@ -159,12 +159,13 @@ public class BufMgr {
 	 * @throws
 	 */
 	public void unpinPage(PageId pageno, boolean dirty)
-			throws PagePinnedException, HashEntryNotFoundException {
+			throws PagePinnedException {
 
 		if (phash.getframe(pageno.pid) == -1) {
-			throw new HashEntryNotFoundException(null,
-					"PageId is not found in the buffer pool");
+			//throw new HashEntryNotFoundException(null,
+				//	"PageId is not found in the buffer pool");
 
+			return;
 		} else {
 			// TODO: Exception
 
@@ -345,4 +346,8 @@ public class BufMgr {
 		return true;
 	}
 
+	public void check()
+	{
+		System.out.println(readylist.size());
+	}
 };
