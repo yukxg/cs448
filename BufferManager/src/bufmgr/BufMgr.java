@@ -118,15 +118,14 @@ public class BufMgr {
 			}
 			phash.addpage(pageno.pid, frame);
 			page.setpage(bufPool[frame]);
-			Page temp = new Page();
 			try {
-				Minibase.DiskManager.read_page(pageno, temp);
+				Minibase.DiskManager.read_page(pageno, page);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			for (int i = 0; i < temp.getpage().length; i++) {
-				bufPool[frame][i] = temp.getpage()[i];
+			for (int i = 0; i < page.getpage().length; i++) {
+				bufPool[frame][i] = page.getpage()[i];
 				// System.out.print(temp.getpage()[i]);
 			}
 			// System.out.println(temp.getData());
