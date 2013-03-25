@@ -343,8 +343,12 @@ class BMDriver extends TestDriver implements GlobalConst {
 		// Now pin that last page, and make sure it fails.
 		if (status == OK) {
 			try {
+				//Minibase.BufferManager.check();
+				
 				Minibase.BufferManager.pinPage(lastPid, pg, /* emptyPage: */
 						false);
+				
+				//Minibase.BufferManager.check();
 			} catch (ChainException e) {
 				status = checkException(e, "bufmgr.BufferPoolExceededException");
 				if (status == FAIL) {
