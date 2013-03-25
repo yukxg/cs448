@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 
-import chainexception.ChainException;
+import chainexception.*;
 import diskmgr.DiskMgr;
 import diskmgr.FileIOException;
 import diskmgr.InvalidPageNumberException;
@@ -89,7 +89,8 @@ public class BufMgr {
 		} else {
 			// get the frame number from priority queue
 			if (readylist.isEmpty())
-				throw new ChainException(null, "used up all the readylist");
+				throw new BufferPoolExceededException(null,
+						"used up all the readylist");
 			frame = readylist.pollFirst();
 			// System.out.println("replace~~ " + frame+" "+pageno.pid );
 			// Iterator<Integer> lt=readylist.iterator();
@@ -132,6 +133,7 @@ public class BufMgr {
 			bufDescr[frame].setPage(pagenomber);
 			bufDescr[frame].setPincount(1);
 			bufDescr[frame].setdirty(false);
+			// LRU-A policy
 			for (int i = 1; i <= numbufs; i++) {
 				int index = phash.getframe(pageno.pid + i);
 				if (!readylist.contains(index) && index != -1)
@@ -167,36 +169,38 @@ public class BufMgr {
 	 * @param dirty
 	 *            the dirty bit of the frame
 	 */
-	public void unpinPage(PageId pageno, boolean dirty) throws ChainException {
+	public void unpinPage(PageId pageno, boolean dirty)
+			throws HashEntryNotFoundException {
 
 		if (phash.getframe(pageno.pid) == -1) {
-			new ChainException();
-			return;
-		}
-		// TODO: Exception
+			//
+			throw new HashEntryNotFoundException(null,
+					"PageId is not found in the buffer pool");
+		} else {
+			// TODO: Exception
 
-		// if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0) {
-		// throw new PageUnpinnedException(null,
-		// "pin_count=0 before this call");
-		// }
-		if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0)
-			return;
-		else {
+			// if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0) {
+			// throw new PageUnpinnedException(null,
+			// "pin_count=0 before this call");
+			// }
+			if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0)
+				return;
+			else {
 
-			bufDescr[phash.getframe(pageno.pid)].setdirty(dirty);
-			bufDescr[phash.getframe(pageno.pid)].decrease_pin_count();
+				bufDescr[phash.getframe(pageno.pid)].setdirty(dirty);
+				bufDescr[phash.getframe(pageno.pid)].decrease_pin_count();
 
-			if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0) {
+				if (bufDescr[phash.getframe(pageno.pid)].get_pin_count() == 0) {
 
-				if (!readylist.contains(phash.getframe(pageno.pid)))
-					readylist.addLast(phash.getframe(pageno.pid) % numbufs);
-				// System.out.println("*** "+phash.getframe(pageno.pid));
+					if (!readylist.contains(phash.getframe(pageno.pid)))
+						readylist.addLast(phash.getframe(pageno.pid) % numbufs);
+					// System.out.println("*** "+phash.getframe(pageno.pid));
+				}
+				// LRU LA policy
+				// not a candidate before this call, however, after this call
+				// the pin_count == 0, it is a candidate right now
 			}
-			// LRU LA policy
-			// not a candidate before this call, however, after this call
-			// the pin_count == 0, it is a candidate right now
 		}
-
 	};
 
 	/**
