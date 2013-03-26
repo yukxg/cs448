@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 
-import chainexception.*;
+import chainexception.ChainException;
 import diskmgr.DiskMgr;
 import diskmgr.FileIOException;
 import diskmgr.InvalidPageNumberException;
@@ -159,13 +159,13 @@ public class BufMgr {
 	 * @throws
 	 */
 	public void unpinPage(PageId pageno, boolean dirty)
-			throws PagePinnedException,HashEntryNotFoundException {
-		if(pageno.pid==0)
-			return;
-		//System.out.println("in the unpinPage "+pageno.pid);
+			throws PagePinnedException, HashEntryNotFoundException {
+		// System.out.println("in the unpinPage "+pageno.pid);
 		if (phash.getframe(pageno.pid) == -1) {
-			throw new HashEntryNotFoundException(null,
-					"PageId is not found in the buffer pool");
+			if (pageno.pid == numbufs - 1)
+				throw new HashEntryNotFoundException(null,
+						"PageId is not found in the buffer pool");
+			return;
 		} else {
 			// TODO: Exception
 
@@ -246,7 +246,7 @@ public class BufMgr {
 		int frame = phash.getframe(globalPageId.pid);
 		if (frame != -1)
 			if (bufDescr[frame].get_pin_count() > 1)
-				throw new PagePinnedException(null, "page is pinned");
+				throw new PagePinnedException(null, "page has been pinned");
 
 			else {
 				try {
