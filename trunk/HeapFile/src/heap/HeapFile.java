@@ -34,8 +34,8 @@ public class HeapFile {
 			pids = new HashSet<Integer>();
 			pages.add(firstPageId);
 			pids.add(firstPageId.pid);
-			current = new HFPage(page);
-			current.initDefaults();
+			current = new HFPage(page);		
+			current.setCurPage(firstPageId);
 			global.Minibase.BufferManager.unpinPage(firstPageId, true);
 		} else {
 			PageId firstPageId;
@@ -59,7 +59,7 @@ public class HeapFile {
 			pids = new HashSet<Integer>();
 			// add the new HFPages
 			global.Minibase.BufferManager.pinPage(firstPageId, page, false);
-			current.copyPage(page);
+			current= new HFPage(page);	
 			pages.add(firstPageId);
 			pids.add(firstPageId.pid);
 			recordNumber += amount(current);
@@ -116,7 +116,8 @@ public class HeapFile {
 	 * @throws IllegalArgumentException
 	 *             if the record is too large
 	 */
-	public RID insertRecord(byte[] record) throws IllegalArgumentException,ChainException {
+	public RID insertRecord(byte[] record) throws IllegalArgumentException,
+			ChainException {
 		if (record.length > GlobalConst.MAX_TUPSIZE)
 			throw new IllegalArgumentException("the record's size is too large");
 		recordNumber++;
@@ -174,7 +175,10 @@ public class HeapFile {
 		Page page = new Page();
 		global.Minibase.BufferManager.pinPage(pid, page, false);
 		HFPage hfpage = new HFPage(page);
-
+		if (newRecord.length != hfpage.selectRecord(rid).length) {
+			throw new IllegalArgumentException("fail to update RID");
+		}
+		global.Minibase.BufferManager.unpinPage(rid.pageno, false);
 	}
 
 	/**
@@ -231,7 +235,17 @@ public class HeapFile {
 
 	public boolean updateRecord(RID rid, Tuple newTuple) throws ChainException {
 		// TODO Auto-generated method stub
-		return false;
+		PageId pid = rid.pageno;
+		if (!pids.contains(pid.pid))
+			throw new IllegalArgumentException("the RID is invalid");
+		Page page = new Page();
+		global.Minibase.BufferManager.pinPage(pid, page, false);
+		HFPage hfpage = new HFPage(page);
+		if (newTuple.getLength() != hfpage.selectRecord(rid).length) {
+			throw new IllegalArgumentException("fail to update RID");
+		}
+		global.Minibase.BufferManager.unpinPage(rid.pageno, false);
+		return true;
 	}
 
 	public Tuple getRecord(RID rid) {
