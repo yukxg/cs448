@@ -57,35 +57,38 @@ public class HeapFile {
 			}
 			pages = new ArrayList<PageId>();
 			pids = new HashSet<Integer>();
-			//add the new HFPages
+			// add the new HFPages
 			global.Minibase.BufferManager.pinPage(firstPageId, page, false);
 			current.copyPage(page);
 			pages.add(firstPageId);
 			pids.add(firstPageId.pid);
-			recordNumber+=amount(current);
+			recordNumber += amount(current);
 			global.Minibase.BufferManager.unpinPage(firstPageId, false);
-			PageId currentPageId=current.getNextPage();
-			while(currentPageId.pid!=0&currentPageId.pid!=-1){
-				HFPage temp=new HFPage();
-				global.Minibase.BufferManager.pinPage(currentPageId, temp, false);
+			PageId currentPageId = current.getNextPage();
+			while (currentPageId.pid != 0 & currentPageId.pid != -1) {
+				HFPage temp = new HFPage();
+				global.Minibase.BufferManager.pinPage(currentPageId, temp,
+						false);
 				pages.add(currentPageId);
 				pids.add(currentPageId.pid);
-				recordNumber+=amount(temp);
+				recordNumber += amount(temp);
 				global.Minibase.BufferManager.unpinPage(currentPageId, false);
-				
+				currentPageId = temp.getNextPage();
 			}
 		}
 
 	}
-private int amount(HFPage hf){
-	RID temp=hf.firstRecord();
-	int amount=0;
-	while(temp!=null){
-		temp=hf.nextRecord(temp);
-		amount++;
+
+	private int amount(HFPage hf) {
+		RID temp = hf.firstRecord();
+		int amount = 0;
+		while (temp != null) {
+			temp = hf.nextRecord(temp);
+			amount++;
+		}
+		return amount;
 	}
-	return amount;
-}
+
 	/**
 	 * Deletes the heap file from the database, freeing all of its pages.
 	 * 
@@ -113,7 +116,7 @@ private int amount(HFPage hf){
 	 * @throws IllegalArgumentException
 	 *             if the record is too large
 	 */
-	public RID insertRecord(byte[] record) throws IllegalArgumentException {
+	public RID insertRecord(byte[] record) throws IllegalArgumentException,ChainException {
 		if (record.length > GlobalConst.MAX_TUPSIZE)
 			throw new IllegalArgumentException("the record's size is too large");
 		recordNumber++;
@@ -122,10 +125,28 @@ private int amount(HFPage hf){
 			Page page = new Page();
 			global.Minibase.BufferManager.pinPage(pid, page, false);
 			HFPage hfpage = new HFPage();
-			hfpage.setPage(page);
+			hfpage.copyPage(page);
+			if (hfpage.getFreeSpace() >= record.length) {
+				RID rid = hfpage.insertRecord(record);
+				global.Minibase.BufferManager.unpinPage(pid, true);
+				return rid;
+			}
+			global.Minibase.BufferManager.unpinPage(pid, false);
 		}
 
-		return null;
+		Page page = new Page();
+		PageId pid = global.Minibase.BufferManager.newPage(page, 1);
+		HFPage hfpage = new HFPage(page);
+		// initialize HFPage
+		hfpage.initDefaults();
+		RID rid = hfpage.insertRecord(record);
+		pages.add(pid);
+		pids.add(pid.pid);
+		current.setNextPage(pid);
+		hfpage.setPrevPage(current.getCurPage());
+		current = hfpage;
+		global.Minibase.BufferManager.unpinPage(pid, true);
+		return rid;
 
 	}
 
@@ -147,6 +168,12 @@ private int amount(HFPage hf){
 	 *             if the rid or new record is invalid
 	 */
 	public void updateRecord(RID rid, byte[] newRecord) {
+		PageId pid = rid.pageno;
+		if (!pids.contains(pid.pid))
+			throw new IllegalArgumentException("the RID is invalid");
+		Page page = new Page();
+		global.Minibase.BufferManager.pinPage(pid, page, false);
+		HFPage hfpage = new HFPage(page);
 
 	}
 
@@ -157,7 +184,22 @@ private int amount(HFPage hf){
 	 *             if the rid is invalid
 	 */
 	public boolean deleteRecord(RID rid) {
-		return false;
+		PageId pid = rid.pageno;
+		if (!pids.contains(pid.pid))
+			throw new IllegalArgumentException("the rid is invalid");
+		try {
+			Page page = new Page();
+			global.Minibase.BufferManager.pinPage(pid, page, false);
+			HFPage hfpage = new HFPage();
+			hfpage.copyPage(page);
+			hfpage.deleteRecord(rid);
+			global.Minibase.BufferManager.unpinPage(pid, true);
+			recordNumber--;
+			return true;
+		} catch (Exception e) {
+			System.err.print("fail to delete record");
+			return false;
+		}
 
 	}
 
@@ -165,7 +207,7 @@ private int amount(HFPage hf){
 	 * Gets the number of records in the file.
 	 */
 	public int getRecCnt() {
-		return 0;
+		return recordNumber;
 
 	}
 
@@ -175,6 +217,7 @@ private int amount(HFPage hf){
 	 * new data page.
 	 */
 	protected PageId getAvailPage(int reclen) {
+
 		return null;
 
 	}
