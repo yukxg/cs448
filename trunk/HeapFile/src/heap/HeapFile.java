@@ -56,7 +56,7 @@ public class HeapFile {
 			}
 			// add the new HFPages
 			global.Minibase.BufferManager.pinPage(firstPageId, page, false);
-			System.err.println("hahahaha"+page.getData());
+			//System.err.println("hahahaha"+page.getData());
 			current=new HFPage(page);
 			current.setData(page.getData());
 			pages.add(firstPageId);
@@ -103,6 +103,7 @@ public class HeapFile {
 			} catch (Exception e) {
 				throw new ChainException(null, "fail to deallocate page");
 			}
+		global.Minibase.DiskManager.delete_file_entry(name);
 		pages = null;
 		pids = null;
 		recordNumber = 0;
@@ -119,13 +120,14 @@ public class HeapFile {
 			ChainException {
 		if (record.length > GlobalConst.MAX_TUPSIZE)
 			throw new IllegalArgumentException("the record's size is too large");
-		recordNumber++;
+		
 		for (int i = 0; i < pages.size(); i++) {
 			PageId pid = pages.get(i);
 			Page page = new Page();
 			global.Minibase.BufferManager.pinPage(pid, page, false);
-			HFPage hfpage = new HFPage();
-			hfpage.copyPage(page);
+			HFPage hfpage = new HFPage(page);
+			hfpage.setCurPage(pid);
+			hfpage.setData(page.getData());
 			if (hfpage.getFreeSpace() >= record.length) {
 				RID rid = hfpage.insertRecord(record);
 				global.Minibase.BufferManager.unpinPage(pid, true);
@@ -146,6 +148,7 @@ public class HeapFile {
 		hfpage.setPrevPage(current.getCurPage());
 		current = hfpage;
 		global.Minibase.BufferManager.unpinPage(pid, true);
+		recordNumber++;
 		return rid;
 	}
 
@@ -156,8 +159,13 @@ public class HeapFile {
 	 *             if the rid is invalid
 	 */
 	public byte[] selectRecord(RID rid) {
-
-		return null;
+		PageId pid = rid.pageno;
+		if (!pids.contains(pid.pid))
+			throw new IllegalArgumentException("the RID is invalid");
+		Page page=new Page();
+		global.Minibase.BufferManager.pinPage(pid, page, false);
+		global.Minibase.BufferManager.unpinPage(pid, false);
+		return page.getData();
 	}
 
 	/**
@@ -244,14 +252,13 @@ public class HeapFile {
 		current = hfpage;
 		global.Minibase.BufferManager.unpinPage(pid, true);
 		return pid;
-
 	}
 
 	// ----auto fix methods-------
 
 	public HeapScan openScan() {
 		// TODO Auto-generated method stub
-		return null;
+		return new HeapScan(this);
 	}
 
 	public boolean updateRecord(RID rid, Tuple newTuple) throws ChainException {
