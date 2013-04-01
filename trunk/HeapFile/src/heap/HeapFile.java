@@ -1,10 +1,21 @@
 package heap;
 
-import chainexception.ChainException;
+import com.sun.tools.javac.util.Convert;
+
+import global.Minibase;
+import global.Page;
 import global.PageId;
 import global.RID;
+import chainexception.ChainException;
 
 public class HeapFile {
+	
+	PageId firstPageId;
+	
+	boolean fdelete;
+	String filename;
+	boolean tf;
+	int tcount; //TODO
 
 	/**
 	   * If the given name already denotes a file, this opens it; otherwise, this
@@ -14,6 +25,42 @@ public class HeapFile {
 	  public HeapFile(String name)
 	  {
 		  
+		  //filename = null;
+		  //TODO fdelete
+		  
+		  //if name == null TODO
+		  if(name == null)
+			  tf = true;
+		  else
+			  tf = false;
+		  
+		  filename = name;
+		  Page page = new Page();
+		  firstPageId = null;
+		  if(name != null)
+		  {
+			  firstPageId = Minibase.DiskManager.get_file_entry(filename);
+		  }
+		  
+		  if(firstPageId == null)
+		  {
+			  firstPageId = Minibase.BufferManager.newPage(page, 1);
+			  //may need exception: no new page
+			  
+			  Minibase.DiskManager.add_file_entry(filename, firstPageId);
+			  
+			  HFPage firstHPage = new HFPage(page);
+			  firstHPage.setCurPage(firstPageId);
+			  
+			  PageId end = new PageId(PageId.INVALID_PAGEID);
+			  firstHPage.setNextPage(end);
+			  firstHPage.setPrevPage(end);
+			  Minibase.BufferManager.unpinPage(firstPageId, true);
+			  
+		  }
+		  
+		  fdelete = false;
+		  
 	  }
 	 
 	/**
@@ -21,7 +68,48 @@ public class HeapFile {
 	   */
 	  public void deleteFile() 
 	  {
+		  if(fdelete)
+			  return; //no need to delete 
 		  
+		  fdelete = true;
+		  
+		  PageId current = new PageId();
+		  current.pid = firstPageId.pid;
+		  PageId next = new PageId();
+		  next.pid = 0;
+		  Page buffer = new Page();
+		  HFPage currentH = new HFPage();
+		  Tuple t;
+		  
+		  Minibase.BufferManager.pinPage(current, currentH, false);
+		  
+		  RID rid = new RID();
+		  while(current.pid != PageId.INVALID_PAGEID)
+		  {
+			  for(rid = currentH.firstRecord(); rid != null; rid = currentH.nextRecord(rid))
+			  {
+				  //t = new Tuple(currentH.selectRecord(rid));
+				  
+				  byte[] temp = currentH.selectRecord(rid);
+				  //offset = 0
+				  
+				  PageId tid = new PageId();
+				  tid.pid = global.Convert.getIntValue(8, temp);
+				  
+				  Minibase.BufferManager.freePage(tid);
+			  }
+			  
+			  next = currentH.getNextPage();
+			  Minibase.BufferManager.freePage(current);
+			  
+			  current.pid = next.pid;
+			  if(next.pid != PageId.INVALID_PAGEID)
+			  {
+				  Minibase.BufferManager.pinPage(current, currentH, false);
+			  }
+		  }
+		  
+		  Minibase.DiskManager.delete_file_entry(filename);
 	  }
 	 
 	  /**
