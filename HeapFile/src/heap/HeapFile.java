@@ -34,7 +34,7 @@ public class HeapFile {
 			pids = new HashSet<Integer>();
 			pages.add(firstPageId);
 			pids.add(firstPageId.pid);
-			current = new HFPage(page);		
+			current = new HFPage(page);
 			current.setCurPage(firstPageId);
 			global.Minibase.BufferManager.unpinPage(firstPageId, true);
 		} else {
@@ -59,7 +59,7 @@ public class HeapFile {
 			pids = new HashSet<Integer>();
 			// add the new HFPages
 			global.Minibase.BufferManager.pinPage(firstPageId, page, false);
-			current= new HFPage(page);	
+			current = new HFPage(page);
 			pages.add(firstPageId);
 			pids.add(firstPageId.pid);
 			recordNumber += amount(current);
@@ -252,5 +252,8 @@ public class HeapFile {
 		// TODO Auto-generated method stub
 		return null;
 	}
+	public Iterator<PageId> iterator() {
+        return pages.iterator();
+}
 
 }
