@@ -4,6 +4,7 @@ import java.util.Iterator;
 
 import chainexception.ChainException;
 import global.Minibase;
+import global.Page;
 import global.PageId;
 import global.RID;
 
@@ -22,15 +23,18 @@ public class HeapScan {
 
 	private RID crid;
 	private Iterator<PageId> it;
+	private boolean init;
 
 	protected HeapScan(HeapFile hf) {
 
+		init = true;
 		this.hf = hf;
 		it = hf.iterator();
 		PageId currentId = it.next();
-		current = new HFPage();
+		Page page=new Page();
+		Minibase.BufferManager.pinPage(currentId, page, false);
 
-		Minibase.BufferManager.pinPage(currentId, current, false);
+		current = new HFPage(page);
 		crid = current.firstRecord();
 
 	}
@@ -85,6 +89,8 @@ public class HeapScan {
 	 *             if the scan has no more elements
 	 */
 	public Tuple getNext(RID rid) throws IllegalStateException {
+		//if(hf.getRecCnt() == 0)
+			//throw new IllegalStateException();
 		if (crid == null) {
 			if (it.hasNext()) {
 				Minibase.BufferManager.unpinPage(current.getCurPage(), false);
@@ -103,8 +109,10 @@ public class HeapScan {
 			rid.copyRID(crid);
 			crid = current.nextRecord(crid);
 			return new Tuple(current.selectRecord(rid));
+			
 		}
-
+		
+	
 		return null;
 
 	}
