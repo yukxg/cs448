@@ -39,10 +39,10 @@ public class HeapScan {
 
 	protected void finalize() throws Throwable
 	{
-		if(current != null)
-		{
-			Minibase.BufferManager.unpinPage(current.getCurPage(), false);
-		}
+		//if(current != null)
+		//{
+			//Minibase.BufferManager.unpinPage(current.getCurPage(), false);
+		//}
 		
 		current = null;
 		
@@ -103,6 +103,9 @@ public class HeapScan {
 			
 			Minibase.BufferManager.pinPage(temp, current, false);
 			crid = current.firstRecord();
+			
+			if(crid == null)
+				Minibase.BufferManager.unpinPage(temp, false);
 		}
 		if(crid != null)
 		{
@@ -111,7 +114,7 @@ public class HeapScan {
 			return new Tuple(current.selectRecord(rid));
 		}
 		
-		throw new IllegalStateException();
+		return null;
 		
 	}
 	
