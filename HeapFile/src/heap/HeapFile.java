@@ -128,8 +128,10 @@ public class HeapFile {
 			HFPage hfpage = new HFPage(page);
 			hfpage.setCurPage(pid);
 			hfpage.setData(page.getData());
-			if (hfpage.getFreeSpace() >= record.length) {
+			if (hfpage.getFreeSpace() > record.length) {
+				
 				RID rid = hfpage.insertRecord(record);
+				recordNumber++;
 				global.Minibase.BufferManager.unpinPage(pid, true);
 				return rid;
 			}
@@ -140,14 +142,18 @@ public class HeapFile {
 		PageId pid = global.Minibase.BufferManager.newPage(page, 1);
 		HFPage hfpage = new HFPage(page);
 		// initialize HFPage
+		hfpage.initDefaults();
 		hfpage.setCurPage(pid);
+		//hfpage.print();
 		RID rid = hfpage.insertRecord(record);
 		pages.add(pid);
 		pids.add(pid.pid);
-		current.setNextPage(pid);
+		hfpage.setNextPage(pid);
 		hfpage.setPrevPage(current.getCurPage());
 		current = hfpage;
 		global.Minibase.BufferManager.unpinPage(pid, true);
+		//hfpage.print();
+		//System.out.println ("The PID is "+pid);
 		recordNumber++;
 		return rid;
 	}
