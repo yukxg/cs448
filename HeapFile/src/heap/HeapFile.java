@@ -3,19 +3,17 @@ package heap;
 import java.util.*;
 
 import chainexception.ChainException;
-import global.GlobalConst;
-import global.Page;
-import global.PageId;
-import global.RID;
-import global.Minibase;
+import global.*;
 
 public class HeapFile {
 	private String name;
-	private ArrayList<PageId> pages;
-	private int recordNumber;
-	private HashSet<Integer> pids;//
-	private boolean delete;
 	private HFPage current;
+	private int recordNumber;
+	private boolean delete;
+	//pages to restore all the pageids
+	//pids to restore all integer of pid
+	private ArrayList<PageId> pages;
+	private HashSet<Integer> pids;//
 
 	/**
 	 * If the given name already denotes a file, this opens it; otherwise, this
