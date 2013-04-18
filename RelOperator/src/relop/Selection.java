@@ -1,5 +1,7 @@
 package relop;
 
+import externalSort.SortMergeJoin;
+
 /**
  * The selection operator specifies which tuples to retain under a condition; in
  * Minibase, this condition is simply a set of independent predicates logically
@@ -14,7 +16,11 @@ public class Selection extends Iterator {
     throw new UnsupportedOperationException("Not implemented");
   }
 
-  /**
+  public Selection(SortMergeJoin join2, Predicate predicate) {
+	// TODO Auto-generated constructor stub
+}
+
+/**
    * Gives a one-line explaination of the iterator, repeats the call on any
    * child iterators, and increases the indent depth along the way.
    */
