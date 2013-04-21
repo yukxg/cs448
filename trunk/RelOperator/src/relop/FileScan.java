@@ -16,7 +16,6 @@ public class FileScan extends Iterator {
 	HeapScan scan;
 	HeapFile file;
 	RID rid;
-	Schema schema;
 	boolean openflag;
 	
   public FileScan(Schema schema, HeapFile file) {
