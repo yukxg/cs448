@@ -37,7 +37,8 @@ public class KeyScan extends Iterator {
 	 */
 	public void explain(int depth) {
 		indent(depth);
-		System.out.println("in the explain: " + file.toString());
+		System.out.println("in the explain: " + file.toString() + " index :"
+				+ index.toString());
 		// throw new UnsupportedOperationException("Not implemented");
 	}
 
@@ -95,18 +96,17 @@ public class KeyScan extends Iterator {
 	 *             if no more tuples
 	 */
 	public Tuple getNext() {
-		  if(openflag==false)
-			  throw new IllegalStateException("getnext error");
-		  try{
-			  RID  rid=scan.getNext();
-			  byte[] temp=file.selectRecord(rid);
-			  Tuple tuple =new Tuple(schema,temp);
-			  return tuple;
-		  }
-		  catch(Exception e){
-			  throw new IllegalStateException("getnext error:fail to get tuple");
-		  }
-		//throw new UnsupportedOperationException("Not implemented");
+		if (openflag == false)
+			throw new IllegalStateException("getnext error");
+		try {
+			RID rid = scan.getNext();
+			byte[] temp = file.selectRecord(rid);
+			Tuple tuple = new Tuple(schema, temp);
+			return tuple;
+		} catch (Exception e) {
+			throw new IllegalStateException("getnext error:fail to get tuple");
+		}
+		// throw new UnsupportedOperationException("Not implemented");
 	}
 
 } // public class KeyScan extends Iterator
