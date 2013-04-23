@@ -70,23 +70,27 @@ public class Selection extends Iterator {
 	 * Returns true if there are more tuples, false otherwise.
 	 */
 	public boolean hasNext() {
-		boolean passflag=false;
-		if (isOpen())
+		
+		if (!isOpen())
 			return false;
 		else{
 			while(iterator.hasNext()){
-				boolean temp=false;
+				//boolean temp=false;
+				boolean passflag=true;
 				Tuple tp=iterator.getNext();
 				for(Predicate pre:predicate){
-					if(pre.evaluate(tp)){
-						passflag=true;
+					if(!pre.evaluate(tp)){
+						passflag=false;
 						break;
 					}
-					if(passflag){
-						tuple=tp;
-						return true;
-					}
+					
 				}
+				
+				if(passflag){
+					tuple=tp;
+					return true;
+				}
+				
 			}return false;
 			
 		}
