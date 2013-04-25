@@ -16,16 +16,16 @@ public class Selection extends Iterator {
 	 * Constructs a selection, given the underlying iterator and predicates.
 	 */
 	public Selection(Iterator iter, Predicate... preds) {
+		
+		if(iter.schema == null)
+			System.err.println("sel");
+		
+		this.test_name = "select";
 		this.schema = iter.schema;
 		this.iterator = iter;
 		this.predicate = preds;
 		tuple = null;
 		// throw new UnsupportedOperationException("Not implemented");
-	}
-
-	public Selection(SortMergeJoin join2, Predicate predicate) {
-		
-		// TODO Auto-generated constructor stub
 	}
 
 	/**
