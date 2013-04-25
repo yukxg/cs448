@@ -19,6 +19,8 @@ public class FileScan extends Iterator {
 	boolean openflag;
 	
   public FileScan(Schema schema, HeapFile file) {
+	  
+	  this.test_name = "file_scan";
 	  this.schema=schema;
 	  this.file=file;
 	  scan=file.openScan();
