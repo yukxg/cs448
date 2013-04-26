@@ -116,9 +116,11 @@ public class SortMergeJoin extends Iterator {
 	private Tuple pt;
 	private Tuple nt;
 	private boolean cont = false;
+	private boolean get_flag = true;
 	
-	public static int tcount = 0;
-	private int it;
+	//public static int tcount = 0;
+	//public static int tcount2 = 0;
+	//private int it;
 
 	/**
 	 * Constructs a join, given the left and right iterators and join predicates
@@ -131,13 +133,14 @@ public class SortMergeJoin extends Iterator {
 		if (right.getSchema() == null)
 			System.err.println("right_join");
 
-		it = i;
+		//it = i;
 		this.test_name = "SM_join";
 		this.left = left;
 		this.right = right;
 		this.preds = new Predicate[] { new Predicate(AttrOperator.EQ,
 				AttrType.FIELDNO, i, AttrType.FIELDNO, left.getSchema()
 						.getCount() + j) };
+		
 		pt = null;
 		nt = null;
 
@@ -216,12 +219,13 @@ public class SortMergeJoin extends Iterator {
 		if (!isOpen())
 			return false;
 
-		
+		if(!get_flag)
+			return true;
 
 		while (left.hasNext() || cont) {
 
-			if(it == 2)
-				tcount++;
+//			if(it == 2)
+//				tcount++;
 			if (!cont)
 			{
 				pt = left.getNext();
@@ -258,12 +262,14 @@ public class SortMergeJoin extends Iterator {
 
 				if (flag) {
 					nt = candidate;
+					get_flag = false;
 					return true;
 				}
 			}
 
 			cont = false;
 			right.restart();
+			
 		}
 
 		nt = null;
@@ -283,6 +289,9 @@ public class SortMergeJoin extends Iterator {
 			throw new IllegalStateException("no more tuples");
 		}
 
+//		if(it == 0)
+//			tcount2++;
+		get_flag = true;
 		return nt;
 
 		// throw new UnsupportedOperationException("Not implemented");

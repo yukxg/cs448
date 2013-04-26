@@ -344,8 +344,9 @@ class RelOperatorTest extends TestDriver {
       SortMergeJoin join2 = new SortMergeJoin(join1, new FileScan(s_drivers, drivers), 2, 0);
       Selection sel = new Selection(join2, new Predicate(AttrOperator.LT,
           AttrType.FIELDNO, 10, AttrType.FIELDNO, 0));
-      System.out.println(join2.execute());
-      System.err.println(SortMergeJoin.tcount);
+      System.out.println(sel.execute());
+      //System.err.println(SortMergeJoin.tcount);
+      //System.err.println(SortMergeJoin.tcount2);
 
       // destroy temp files before doing final counts
       sel = null;
