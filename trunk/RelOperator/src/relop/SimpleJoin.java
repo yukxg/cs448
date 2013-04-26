@@ -27,6 +27,7 @@ public class SimpleJoin extends Iterator {
 	  this.schema = Schema.join(left.schema, right.schema);
 	  
     //throw new UnsupportedOperationException("Not implemented");
+	  //todo
   }
 
   /**
