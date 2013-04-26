@@ -1,5 +1,10 @@
 package externalSort;
 
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+
 import global.AttrOperator;
 import global.AttrType;
 import relop.FileScan;
@@ -118,6 +123,10 @@ public class SortMergeJoin extends Iterator {
 	private boolean cont = false;
 	private boolean get_flag = true;
 	
+	private ArrayList<Tuple> left_iter;
+	private ArrayList<Tuple> right_iter;
+	private ArrayList<Tuple> final_result;
+	private java.util.Iterator<Tuple> final_iter;
 	//public static int tcount = 0;
 	//public static int tcount2 = 0;
 	//private int it;
@@ -128,25 +137,276 @@ public class SortMergeJoin extends Iterator {
 	 */
 	public SortMergeJoin(Iterator left, Iterator right, int i, int j) {
 
-		if (left.getSchema() == null)
-			System.err.println("left_join");
-		if (right.getSchema() == null)
-			System.err.println("right_join");
+		left_iter = new ArrayList<Tuple>();
+		right_iter = new ArrayList<Tuple>();
+		final_result = new ArrayList<Tuple>();
+		
+		while(left.hasNext())
+		{
+			left_iter.add(left.getNext());
+		}
+		while(right.hasNext())
+		{
+			right_iter.add(right.getNext());
+		}
+		
+		final int fi = i;
+		final int fj = j;
+		
+		//sort
+		switch(left.getSchema().fieldType(i)){
+		
+		case AttrType.INTEGER:
+			Collections.sort(left_iter, new Comparator<Tuple>(){
+				
+				public int compare(Tuple o1, Tuple o2)
+				{
+					
+					return o1.getIntFld(fi) - o2.getIntFld(fi);
+				}
+				
+			});
+			break;
+			
+		case AttrType.STRING:
+			Collections.sort(left_iter, new Comparator<Tuple>(){
+				
+				public int compare(Tuple o1, Tuple o2)
+				{
+					
+					if(o1.getStringFld(fi).compareTo(o2.getStringFld(fi)) < 0)
+					{
+						return -1;
+					}
+					else if(o1.getStringFld(fi).compareTo(o2.getStringFld(fi)) > 0)
+					{
+						return 1;
+					}
+					else
+						return 0;
+				}
+				
+			});
+			break;
+			
+		case AttrType.FLOAT:
+			Collections.sort(left_iter, new Comparator<Tuple>(){
+				
+				public int compare(Tuple o1, Tuple o2)
+				{
+					
+					if(o1.getFloatFld(fi) < o2.getFloatFld(fi))
+					{
+						return -1;
+					}
+					else if(o1.getFloatFld(fi) > o2.getFloatFld(fi))
+					{
+						return 1;
+					}
+					else
+						return 0;
+				}
+				
+			});
+			break;
+		
+		}
+		
+		switch(right.getSchema().fieldType(j)){
+		
+		case AttrType.INTEGER:
+			Collections.sort(right_iter, new Comparator<Tuple>(){
+				
+				public int compare(Tuple o1, Tuple o2)
+				{
+					
+					return o1.getIntFld(fj) - o2.getIntFld(fj);
+				}
+				
+			});
+			break;
+			
+		case AttrType.STRING:
+			Collections.sort(right_iter, new Comparator<Tuple>(){
+				
+				public int compare(Tuple o1, Tuple o2)
+				{
+					
+					if(o1.getStringFld(fj).compareTo(o2.getStringFld(fj)) < 0)
+					{
+						return -1;
+					}
+					else if(o1.getStringFld(fj).compareTo(o2.getStringFld(fj)) > 0)
+					{
+						return 1;
+					}
+					else
+						return 0;
+				}
+				
+			});
+			break;
+			
+		case AttrType.FLOAT:
+			Collections.sort(right_iter, new Comparator<Tuple>(){
+				
+				public int compare(Tuple o1, Tuple o2)
+				{
+					
+					if(o1.getFloatFld(fj) < o2.getFloatFld(fj))
+					{
+						return -1;
+					}
+					else if(o1.getFloatFld(fj) > o2.getFloatFld(fj))
+					{
+						return 1;
+					}
+					else
+						return 0;
+				}
+				
+			});
+			break;
+		
+		}
 
+		//may need to restart left and right
 		//it = i;
-		this.test_name = "SM_join";
+		//this.test_name = "SM_join";
 		this.left = left;
 		this.right = right;
 		this.preds = new Predicate[] { new Predicate(AttrOperator.EQ,
 				AttrType.FIELDNO, i, AttrType.FIELDNO, left.getSchema()
 						.getCount() + j) };
 		
-		pt = null;
-		nt = null;
+		//pt = null;
+		//nt = null;
 
 		this.schema = Schema.join(left.getSchema(), right.getSchema());
 
 		// throw new UnsupportedOperationException("Not implemented");
+		
+		ArrayList<Tuple> left_current = duplicateTuples(left_iter, i, 0);
+		ArrayList<Tuple> right_current = duplicateTuples(right_iter, j, 1);
+		
+		while(!left_current.isEmpty() && !right_current.isEmpty())
+		{
+			
+			switch(right.getSchema().fieldType(j))
+			{
+			case AttrType.INTEGER:
+				if(left_current.get(0).getIntFld(i) == right_current.get(0).getIntFld(j))
+				{
+					for(Tuple a : left_current)
+						for(Tuple b : right_current)
+						{
+							final_result.add(Tuple.join(a, b, schema));
+						}
+					left_current = duplicateTuples(left_iter, i, 0);
+					right_current = duplicateTuples(right_iter, j, 1);
+				}
+				else if(left_current.get(0).getIntFld(i) < right_current.get(0).getIntFld(j))
+				{
+					left_current = duplicateTuples(left_iter, i, 0);
+				}
+				else
+					right_current = duplicateTuples(right_iter, j, 1);
+				break;
+			
+			case AttrType.FLOAT:
+				if(left_current.get(0).getFloatFld(i) == right_current.get(0).getFloatFld(j))
+				{
+					for(Tuple a : left_current)
+						for(Tuple b : right_current)
+						{
+							final_result.add(Tuple.join(a, b, schema));
+						}
+					left_current = duplicateTuples(left_iter, i, 0);
+					right_current = duplicateTuples(right_iter, j, 1);
+				}
+				else if(left_current.get(0).getFloatFld(i) < right_current.get(0).getFloatFld(j))
+				{
+					left_current = duplicateTuples(left_iter, i, 0);
+				}
+				else
+					right_current = duplicateTuples(right_iter, j, 1);
+				break;
+				
+			case AttrType.STRING:
+				if(left_current.get(0).getStringFld(i).equals(right_current.get(0).getStringFld(j)))
+				{
+					for(Tuple a : left_current)
+						for(Tuple b : right_current)
+						{
+							final_result.add(Tuple.join(a, b, schema));
+						}
+					left_current = duplicateTuples(left_iter, i, 0);
+					right_current = duplicateTuples(right_iter, j, 1);
+				}
+				else if(left_current.get(0).getStringFld(i).compareTo(right_current.get(0).getStringFld(j)) < 0)
+				{
+					left_current = duplicateTuples(left_iter, i, 0);
+				}
+				else
+					right_current = duplicateTuples(right_iter, j, 1);
+				break;
+			
+			}
+			
+		}
+		
+		final_iter = final_result.iterator();
+		
+	}
+	
+	private ArrayList<Tuple> duplicateTuples(ArrayList<Tuple> iter, int index, int lr)
+	{
+		//iter cannot be empty
+		if(iter.isEmpty())
+		{
+			return new ArrayList<Tuple>();
+		}
+		
+		int type;
+		if(lr == 0)
+		{
+			type = left.getSchema().fieldType(index);
+		}
+		else
+		{
+			type = right.getSchema().fieldType(index);
+		}
+		
+		ArrayList<Tuple> output = new ArrayList<Tuple>();
+		switch(type)
+		{
+		case AttrType.INTEGER:
+			int key = iter.get(0).getIntFld(index);
+			while(!iter.isEmpty() && key == iter.get(0).getIntFld(index))
+			{
+				output.add(iter.remove(0));
+			}
+			break;
+		
+		case AttrType.FLOAT:
+			float keyf = iter.get(0).getFloatFld(index);
+			while(!iter.isEmpty() && keyf == iter.get(0).getFloatFld(index))
+			{
+				output.add(iter.remove(0));
+			}
+			break;
+			
+		case AttrType.STRING:
+			String keys = iter.get(0).getStringFld(index);
+			while(!iter.isEmpty() && keys.equals(iter.get(0).getStringFld(index)))
+			{
+				output.add(iter.remove(0));
+			}
+			break;
+		
+		}
+		
+		return output;
 	}
 
 	/**
@@ -181,8 +441,8 @@ public class SortMergeJoin extends Iterator {
 		left.restart();
 		right.restart();
 
-		pt = null;
-		nt = null;
+		//pt = null;
+		//nt = null;
 
 		// throw new UnsupportedOperationException("Not implemented");
 	}
@@ -205,8 +465,8 @@ public class SortMergeJoin extends Iterator {
 		left.close();
 		right.close();
 
-		pt = null;
-		nt = null;
+		//pt = null;
+		//nt = null;
 
 		// throw new UnsupportedOperationException("Not implemented");
 	}
@@ -215,65 +475,69 @@ public class SortMergeJoin extends Iterator {
 	 * Returns true if there are more tuples, false otherwise.
 	 */
 	public boolean hasNext() {
-
-		if (!isOpen())
-			return false;
-
-		if(!get_flag)
-			return true;
-
-		while (left.hasNext() || cont) {
-
-//			if(it == 2)
-//				tcount++;
-			if (!cont)
-			{
-				pt = left.getNext();
-//				if(it == 2)
-//					tcount++;
-			}
-
-			// if(pt == null)
-			// {
-			// if(!left.hasNext())
-			// {
-			// nt = null;
-			// return false;
-			// }
-			// else
-			// {
-			// pt = left.getNext();
-			// }
-			// }
-
-			while (right.hasNext()) {
-				cont = true;
-				Tuple rt = right.getNext();
-				Tuple candidate = Tuple.join(pt, rt, schema);
-
-				boolean flag = true;
-
-				for (Predicate pre : preds) {
-					if (!pre.evaluate(candidate)) {
-						flag = false;
-						break;
-					}
-				}
-
-				if (flag) {
-					nt = candidate;
-					get_flag = false;
-					return true;
-				}
-			}
-
-			cont = false;
-			right.restart();
-			
-		}
-
-		nt = null;
-		return false;
+//
+//		if (!isOpen())
+//			return false;
+//
+//		if(!get_flag)
+//			return true;
+//
+//		while (left.hasNext() || cont) {
+//
+////			if(it == 2)
+////				tcount++;
+//			if (!cont)
+//			{
+//				pt = left.getNext();
+////				if(it == 2)
+////					tcount++;
+//			}
+//
+//			// if(pt == null)
+//			// {
+//			// if(!left.hasNext())
+//			// {
+//			// nt = null;
+//			// return false;
+//			// }
+//			// else
+//			// {
+//			// pt = left.getNext();
+//			// }
+//			// }
+//
+//			while (right.hasNext()) {
+//				cont = true;
+//				Tuple rt = right.getNext();
+//				Tuple candidate = Tuple.join(pt, rt, schema);
+//
+//				boolean flag = true;
+//
+//				for (Predicate pre : preds) {
+//					if (!pre.evaluate(candidate)) {
+//						flag = false;
+//						break;
+//					}
+//				}
+//
+//				if (flag) {
+//					nt = candidate;
+//					get_flag = false;
+//					return true;
+//				}
+//			}
+//
+//			cont = false;
+//			right.restart();
+//			
+//		}
+//
+//		nt = null;
+//		return false;
+		
+		
+		return final_iter.hasNext();
+		
 		// throw new UnsupportedOperationException("Not implemented");
 	}
 
@@ -285,14 +549,20 @@ public class SortMergeJoin extends Iterator {
 	 */
 	public Tuple getNext() {
 
-		if (nt == null) {
+//		if (nt == null) {
+//			throw new IllegalStateException("no more tuples");
+//		}
+//
+////		if(it == 0)
+////			tcount2++;
+//		get_flag = true;
+//		return nt;
+		if(!final_iter.hasNext())
+		{
 			throw new IllegalStateException("no more tuples");
 		}
-
-//		if(it == 0)
-//			tcount2++;
-		get_flag = true;
-		return nt;
+		
+		return final_iter.next();
 
 		// throw new UnsupportedOperationException("Not implemented");
 	}
