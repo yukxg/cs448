@@ -11,6 +11,9 @@ public class SimpleJoin extends Iterator {
 	private Predicate[] preds;
 	private Tuple pt;
 	private Tuple nt;
+	
+	private boolean cont = false;
+	private boolean get_flag = true;
 
   /**
    * Constructs a join, given the left and right iterators and join predicates
@@ -105,10 +108,13 @@ public class SimpleJoin extends Iterator {
 	  if(!isOpen())
 		  return false;
 	  
-	  while(left.hasNext())
+	  if(!get_flag)
+		  return true;
+	  
+	  while(left.hasNext() || cont)
 	  {
-		  
-		  pt = left.getNext();
+		  if(!cont)
+		    pt = left.getNext();
 		  
 //		  if(pt == null)
 //		  {
@@ -125,6 +131,7 @@ public class SimpleJoin extends Iterator {
 		  
 		  while(right.hasNext())
 		  {
+			  cont = true;
 			  Tuple rt = right.getNext();
 			  Tuple candidate = Tuple.join(pt, rt, schema);
 			  
@@ -142,10 +149,12 @@ public class SimpleJoin extends Iterator {
 			  if(flag)
 			  {
 				  nt = candidate;
+				  get_flag = false;
 				  return true;
 			  }
 		  }
 		  
+		  cont = false;
 		  right.restart();
 	  }
 	  
@@ -166,6 +175,7 @@ public class SimpleJoin extends Iterator {
 		  throw new IllegalStateException("no more tuples");
 	  }
 	  
+	  get_flag = true;
 	  return nt;
 	  
     //throw new UnsupportedOperationException("Not implemented");

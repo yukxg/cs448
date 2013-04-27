@@ -20,7 +20,7 @@ public class Selection extends Iterator {
 		if(iter.schema == null)
 			System.err.println("sel");
 		
-		this.test_name = "select";
+		//this.test_name = "select";
 		this.schema = iter.schema;
 		this.iterator = iter;
 		this.predicate = preds;

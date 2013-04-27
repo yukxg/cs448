@@ -11,8 +11,7 @@ package relop;
 public abstract class Iterator {
 
   /** Schema for resulting tuples; must be set in all subclass constructors. */
-  protected Schema schema;
-  public String test_name;
+	protected Schema schema;
 
   // --------------------------------------------------------------------------
 
@@ -65,9 +64,6 @@ public abstract class Iterator {
    */
   public int execute() {
     int cnt = 0;
-    if(getSchema() == null)
-    	System.err.println(this.test_name);
-    
     getSchema().print();
     while (hasNext()) {
       getNext().print();
